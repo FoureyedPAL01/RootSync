@@ -110,6 +110,9 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
     implementation("com.google.firebase:firebase-messaging-ktx")
 
+    // Lottie (Animations)
+    implementation("com.airbnb.android:lottie-compose:6.3.0")
+
     // Debug only
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

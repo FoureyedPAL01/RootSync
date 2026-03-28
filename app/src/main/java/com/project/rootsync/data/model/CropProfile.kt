@@ -4,11 +4,10 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class Alert(
+data class CropProfile(
     val id: String,
     @SerialName("device_id") val deviceId: String,
-    val type: String,
-    val message: String,
-    @SerialName("is_read") val isRead: Boolean,
-    @SerialName("created_at") val createdAt: String
+    val name: String,
+    @SerialName("moisture_threshold") val moistureThreshold: Int,
+    @SerialName("rain_probability_threshold") val rainProbabilityThreshold: Int
 )

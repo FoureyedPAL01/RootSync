@@ -4,11 +4,10 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class Alert(
+data class DeviceToken(
     val id: String,
-    @SerialName("device_id") val deviceId: String,
-    val type: String,
-    val message: String,
-    @SerialName("is_read") val isRead: Boolean,
+    @SerialName("user_id") val userId: String,
+    val token: String,
+    val platform: String = "android",
     @SerialName("created_at") val createdAt: String
 )

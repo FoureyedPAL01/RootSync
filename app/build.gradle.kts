@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.dagger.hilt.android")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -63,6 +65,7 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
     implementation("io.github.jan-tennert.supabase:realtime-kt")
     implementation("io.github.jan-tennert.supabase:gotrue-kt")
+    implementation("io.github.jan-tennert.supabase:storage-kt")
 
     // Ktor (required by Supabase)
     implementation("io.ktor:ktor-client-android:2.3.8")
@@ -75,6 +78,17 @@ dependencies {
 
     // DataStore (replaces shared_preferences)
     implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    // Hilt (Dependency Injection)
+    implementation("com.google.dagger:hilt-android:2.50")
+    ksp("com.google.dagger:hilt-compiler:2.50")
+
+    // Retrofit (API calls)
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+
+    // Vico (Charts)
+    implementation("com.patrykandpatrick.vico:compose-m3:1.13.1")
 
     // Debug only
     debugImplementation("androidx.compose.ui:ui-tooling")

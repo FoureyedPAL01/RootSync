@@ -1,0 +1,26 @@
+# Python (used by ESP-IDF/PlatformIO)
+*.pyc
+__pycache__/
+venv/
+.venv/
+
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+.vscode/
+.idea/
+
+# Arduino IDE
+*.hex
+*.bin
+*.elf
+*.eep
+*.lst
+build/
+
+# Logs
+*.log
+
+# Config (contains secrets)
+config.h

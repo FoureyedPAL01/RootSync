@@ -6,10 +6,9 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.project.rootsync.R
 
-// Note: Add manrope.ttf to app/src/main/res/font/ directory
-// Download from: https://fonts.google.com/specimen/Manrope
-val ManropeFont = FontFamily.Default // Replace with: FontFamily(Font(R.font.manrope))
+val ManropeFont = FontFamily(Font(R.font.manrope))
 
 val Typography = Typography(
     displayLarge = TextStyle(

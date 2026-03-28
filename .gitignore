@@ -88,3 +88,10 @@ lint-results_files/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# ESP32 config (contains secrets)
+esp32/config.h
+
+# Supabase local (contains secrets)
+supabase/.env
+supabase/.env.local

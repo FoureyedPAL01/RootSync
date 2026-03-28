@@ -4,6 +4,15 @@ import com.project.rootsync.data.model.SensorReading
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.realtime.PostgresAction
+import io.github.jan.supabase.realtime.RealtimeChannel
+import io.github.jan.supabase.realtime.channel
+import io.github.jan.supabase.realtime.postgresChangeFlow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onStart
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -50,4 +59,32 @@ class SensorRepository @Inject constructor(
                 limit(limit)
             }
             .decodeList<SensorReading>()
+
+    fun sensorReadingFlow(deviceId: String): Flow<SensorReading> {
+        val channel = supabase.channel("sensor:$deviceId")
+        return channel
+            .postgresChangeFlow<PostgresAction.Insert>(schema = "public") {
+                table = "sensor_readings"
+                filter = "device_id=eq.$deviceId"
+            }
+            .map { action ->
+                Json.decodeFromJsonElement(
+                    SensorReading.serializer(),
+                    action.record
+                )
+            }
+            .onStart { channel.subscribe() }
+            .onCompletion { supabase.removeChannel(channel) }
+    }
+
+    fun alertFlow(deviceId: String): Flow<PostgresAction> {
+        val channel = supabase.channel("alerts:$deviceId")
+        return channel
+            .postgresChangeFlow<PostgresAction.Insert>(schema = "public") {
+                table = "system_alerts"
+                filter = "device_id=eq.$deviceId"
+            }
+            .onStart { channel.subscribe() }
+            .onCompletion { supabase.removeChannel(channel) }
+    }
 }

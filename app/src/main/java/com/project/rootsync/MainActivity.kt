@@ -12,19 +12,30 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
+import com.project.rootsync.data.UserPreferencesDataStore
 import com.project.rootsync.data.repository.AuthState
 import com.project.rootsync.ui.navigation.RootSyncNavGraph
 import com.project.rootsync.ui.navigation.Screen
 import com.project.rootsync.ui.theme.RootSyncTheme
 import com.project.rootsync.viewmodel.AuthViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Hardcode device and user IDs
+        lifecycleScope.launch {
+            val prefs = UserPreferencesDataStore(applicationContext)
+            prefs.saveDeviceId("62e19bc1-2e15-43f9-a93b-ee68585a0e89")
+            prefs.saveUserId("2cfca950-b279-4dd0-884e-5e50731d96ac")
+        }
+
         setContent {
             RootSyncTheme {
                 RootSyncApp()

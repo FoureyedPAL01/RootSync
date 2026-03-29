@@ -67,7 +67,7 @@ class DeviceRepository @Inject constructor(
             id = deviceId,
             userId = userId,
             name = name,
-            isOnline = false
+            status = "offline"
         )
         return insertDevice(device)
     }

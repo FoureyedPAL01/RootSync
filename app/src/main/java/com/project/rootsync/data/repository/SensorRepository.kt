@@ -27,7 +27,7 @@ class SensorRepository @Inject constructor(
                 filter {
                     eq("device_id", deviceId)
                 }
-                order("created_at", Order.DESCENDING)
+                order("recorded_at", Order.DESCENDING)
                 limit(1)
             }
             .decodeList<SensorReading>()
@@ -42,10 +42,10 @@ class SensorRepository @Inject constructor(
             .select {
                 filter {
                     eq("device_id", deviceId)
-                    gte("created_at", from)
-                    lte("created_at", to)
+                    gte("recorded_at", from)
+                    lte("recorded_at", to)
                 }
-                order("created_at", Order.ASCENDING)
+                order("recorded_at", Order.ASCENDING)
             }
             .decodeList<SensorReading>()
 
@@ -55,7 +55,7 @@ class SensorRepository @Inject constructor(
                 filter {
                     eq("device_id", deviceId)
                 }
-                order("created_at", Order.DESCENDING)
+                order("recorded_at", Order.DESCENDING)
                 limit(limit)
             }
             .decodeList<SensorReading>()
@@ -81,7 +81,7 @@ class SensorRepository @Inject constructor(
         val channel = supabase.channel("alerts:$deviceId")
         return channel
             .postgresChangeFlow<PostgresAction.Insert>(schema = "public") {
-                table = "system_alerts"
+                table = "alerts"
                 filter = "device_id=eq.$deviceId"
             }
             .onStart { channel.subscribe() }

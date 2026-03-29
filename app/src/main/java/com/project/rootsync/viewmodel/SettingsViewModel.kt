@@ -1,13 +1,18 @@
 package com.project.rootsync.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.project.rootsync.data.UserPreferencesDataStore
 import com.project.rootsync.util.SaveStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -33,44 +38,69 @@ data class SettingsUiState(
 
 /**
  * ViewModel for settings screen.
+ * Loads from and saves to DataStore.
  */
 @HiltViewModel
-class SettingsViewModel @Inject constructor() : ViewModel() {
+class SettingsViewModel @Inject constructor(
+    application: Application
+) : AndroidViewModel(application) {
 
-    private val _uiState = MutableStateFlow(SettingsUiState())
-    val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+    private val prefs = UserPreferencesDataStore(application)
 
     private val _saveStatus = MutableStateFlow(SaveStatus.IDLE)
     val saveStatus: StateFlow<SaveStatus> = _saveStatus.asStateFlow()
 
-    init {
-        loadSettings()
-    }
+    // Load from DataStore
+    val uiState: StateFlow<SettingsUiState> = combine(
+        prefs.themeFlow,
+        prefs.pumpAlertsFlow,
+        prefs.soilMoistureAlertsFlow,
+        prefs.weatherAlertsFlow,
+        prefs.fertigationRemindersFlow,
+        prefs.deviceOfflineAlertsFlow,
+        prefs.weeklySummaryFlow
+    ) { theme, pump, soil, weather, fert, offline, weekly ->
+        SettingsUiState(
+            themeMode = when (theme) {
+                "light" -> ThemePref.LIGHT
+                "dark" -> ThemePref.DARK
+                else -> ThemePref.SYSTEM
+            },
+            pumpAlerts = pump,
+            soilMoistureAlerts = soil,
+            weatherAlerts = weather,
+            fertigationReminders = fert,
+            deviceOfflineAlerts = offline,
+            weeklySummary = weekly
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUiState())
 
-    private fun loadSettings() {
-        // TODO: Load from DataStore
-        _uiState.value = SettingsUiState()
-    }
-
+    // Save theme to DataStore
     fun updateThemeMode(pref: ThemePref) {
-        _uiState.update { it.copy(themeMode = pref) }
-        // TODO: Save to DataStore
+        viewModelScope.launch {
+            val themeStr = when (pref) {
+                ThemePref.LIGHT -> "light"
+                ThemePref.DARK -> "dark"
+                ThemePref.SYSTEM -> "system"
+            }
+            prefs.saveTheme(themeStr)
+        }
     }
 
+    // Save notification toggle to DataStore
     fun updateNotificationSetting(key: String, enabled: Boolean) {
         viewModelScope.launch {
             _saveStatus.value = SaveStatus.SAVING
 
             when (key) {
-                "pump_alerts" -> _uiState.update { it.copy(pumpAlerts = enabled) }
-                "soil_moisture_alerts" -> _uiState.update { it.copy(soilMoistureAlerts = enabled) }
-                "weather_alerts" -> _uiState.update { it.copy(weatherAlerts = enabled) }
-                "fertigation_reminders" -> _uiState.update { it.copy(fertigationReminders = enabled) }
-                "device_offline_alerts" -> _uiState.update { it.copy(deviceOfflineAlerts = enabled) }
-                "weekly_summary" -> _uiState.update { it.copy(weeklySummary = enabled) }
+                "pump_alerts" -> prefs.savePumpAlerts(enabled)
+                "soil_moisture_alerts" -> prefs.saveSoilMoistureAlerts(enabled)
+                "weather_alerts" -> prefs.saveWeatherAlerts(enabled)
+                "fertigation_reminders" -> prefs.saveFertigationReminders(enabled)
+                "device_offline_alerts" -> prefs.saveDeviceOfflineAlerts(enabled)
+                "weekly_summary" -> prefs.saveWeeklySummary(enabled)
             }
 
-            // TODO: Save to DataStore
             delay(600) // Brief visual feedback
             _saveStatus.value = SaveStatus.IDLE
         }

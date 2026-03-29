@@ -4,6 +4,8 @@ import android.util.Log
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -17,7 +19,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     lateinit var notificationService: NotificationService
 
     @Inject
-    lateinit var supabaseClient: io.github.jan.supabase.SupabaseClient
+    lateinit var supabaseClient: SupabaseClient
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -29,11 +31,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             try {
                 val userId = supabaseClient.auth.currentUserOrNull()?.id
                 if (userId != null) {
-                    supabaseClient.from("device_tokens").upsert(
+                    supabaseClient.postgrest["device_tokens"].upsert(
                         mapOf(
                             "user_id" to userId,
-                            "token" to token,
-                            "platform" to "android"
+                            "fcm_token" to token
                         )
                     )
                     Log.d("FirebaseMsgService", "Token saved to Supabase")

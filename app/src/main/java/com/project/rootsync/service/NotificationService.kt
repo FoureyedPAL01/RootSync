@@ -77,4 +77,13 @@ class NotificationService @Inject constructor(
             notificationId = alertType.hashCode()
         )
     }
+
+    /**
+     * Called after successful login/signup to initialize notifications.
+     * Equivalent to Flutter's NotificationService.onUserLogin()
+     */
+    suspend fun onUserLogin() {
+        // Initialize FCM token registration or other notification setup
+        // This can be expanded to register device token with backend
+    }
 }

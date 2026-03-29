@@ -4,9 +4,13 @@ import com.project.rootsync.data.model.Device
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
+import kotlinx.datetime.Clock
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Repository for device-related operations.
+ */
 @Singleton
 class DeviceRepository @Inject constructor(
     private val supabase: SupabaseClient
@@ -16,7 +20,7 @@ class DeviceRepository @Inject constructor(
         supabase.postgrest["devices"]
             .select {
                 filter {
-                    eq("owner_id", userId)
+                    eq("user_id", userId)
                 }
                 order("created_at", Order.ASCENDING)
             }
@@ -61,11 +65,38 @@ class DeviceRepository @Inject constructor(
     suspend fun linkDevice(deviceId: String, userId: String, name: String, location: String? = null): Device {
         val device = Device(
             id = deviceId,
-            ownerId = userId,
+            userId = userId,
             name = name,
-            location = location,
             isOnline = false
         )
         return insertDevice(device)
+    }
+
+    /**
+     * Attempts to claim a device by updating its user_id.
+     * Returns the updated Device if successful, or null if UUID doesn't exist.
+     */
+    suspend fun claimDevice(deviceUuid: String, userId: String, name: String? = null): Device? {
+        val now = Clock.System.now().toString()
+        val updates = mutableMapOf<String, Any>(
+            "user_id" to userId,
+            "claimed_at" to now
+        )
+        if (name != null) {
+            updates["name"] = name
+        }
+
+        return try {
+            supabase.postgrest["devices"]
+                .update(updates) {
+                    filter {
+                        eq("id", deviceUuid)
+                    }
+                    select()
+                }
+                .decodeSingleOrNull<Device>()
+        } catch (e: Exception) {
+            null
+        }
     }
 }

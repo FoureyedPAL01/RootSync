@@ -1,5 +1,6 @@
 package com.project.rootsync.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,174 +12,101 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Air
-import androidx.compose.material.icons.rounded.Opacity
-import androidx.compose.material.icons.rounded.Thermostat
-import androidx.compose.material.icons.rounded.WaterDrop
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
-import com.project.rootsync.data.remote.HourlyData
-import com.project.rootsync.data.repository.WeatherRepository
-import javax.inject.Inject
+import com.project.rootsync.data.remote.AqiHelper
+import com.project.rootsync.data.remote.DewPointCalculator
+import com.project.rootsync.data.remote.UvHelper
+import com.project.rootsync.data.remote.WeatherDateHelper
+import com.project.rootsync.data.remote.WeatherUnitConverter
+import com.project.rootsync.data.remote.WindDirectionHelper
+import com.project.rootsync.data.remote.WmoWeatherHelper
+import com.project.rootsync.ui.screens.weather.AqiTile
+import com.project.rootsync.ui.screens.weather.DailyForecastSection
+import com.project.rootsync.ui.screens.weather.HeroCard
+import com.project.rootsync.ui.screens.weather.HourlyStrip
+import com.project.rootsync.ui.screens.weather.HumidityTile
+import com.project.rootsync.ui.screens.weather.PrecipTile
+import com.project.rootsync.ui.screens.weather.UvTile
+import com.project.rootsync.ui.screens.weather.WindTile
+import com.project.rootsync.viewmodel.WeatherUiState
+import com.project.rootsync.viewmodel.WeatherViewModel
 
+/**
+ * Main Weather screen composable.
+ * Displays current weather, hourly forecast, 7-day forecast, and weather conditions.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeatherScreen(
-    navController: NavController,
-    weatherRepository: WeatherRepository = hiltViewModel<WeatherRepoViewModel>().weatherRepository
+    viewModel: WeatherViewModel = hiltViewModel()
 ) {
-    var hourlyData by remember { mutableStateOf<HourlyData?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val uiState by viewModel.uiState.collectAsState()
+    val units by viewModel.units.collectAsState()
 
-    // TODO: Get location from user profile or DataStore
-    val latitude = 19.076  // Mumbai default
-    val longitude = 72.877
-
-    LaunchedEffect(Unit) {
-        isLoading = true
-        weatherRepository.getWeatherData(latitude, longitude)
-            .onSuccess { response ->
-                hourlyData = response.hourly
-                isLoading = false
-            }
-            .onFailure { e ->
-                errorMessage = e.message
-                isLoading = false
-            }
-    }
+    val scrollState = rememberScrollState()
 
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("Weather Forecast") })
         }
     ) { innerPadding ->
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) { CircularProgressIndicator() }
-        } else if (errorMessage != null) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) { Text("Error: $errorMessage") }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Current weather card
-                item {
-                    val currentTemp = hourlyData?.temperature_2m?.firstOrNull() ?: 0.0
-                    val currentHumidity = hourlyData?.relative_humidity_2m?.firstOrNull() ?: 0.0
-                    val currentRain = hourlyData?.precipitation?.firstOrNull() ?: 0.0
-
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer
-                        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+        ) {
+            when (val state = uiState) {
+                is WeatherUiState.Loading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(modifier = Modifier.padding(24.dp)) {
-                            Text("Current Conditions", style = MaterialTheme.typography.titleMedium)
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly
-                            ) {
-                                WeatherStat(
-                                    icon = Icons.Rounded.Thermostat,
-                                    label = "Temperature",
-                                    value = "${String.format("%.1f", currentTemp)}°C"
-                                )
-                                WeatherStat(
-                                    icon = Icons.Rounded.Air,
-                                    label = "Humidity",
-                                    value = "${currentHumidity.toInt()}%"
-                                )
-                                WeatherStat(
-                                    icon = Icons.Rounded.WaterDrop,
-                                    label = "Rain",
-                                    value = "${String.format("%.1f", currentRain)}mm"
-                                )
-                            }
-                        }
+                        androidx.compose.material3.CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
 
-                // Evapotranspiration
-                item {
-                    val currentET = hourlyData?.et0_fao_evapotranspiration?.firstOrNull() ?: 0.0
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Evapotranspiration (ET₀)", style = MaterialTheme.typography.titleMedium)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                "${String.format("%.2f", currentET)} mm/hr",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
+                is WeatherUiState.Error -> {
+                    WeatherErrorContent(
+                        message = state.message,
+                        onRetry = viewModel::refresh
+                    )
                 }
 
-                // Hourly forecast
-                item {
-                    Text("Hourly Forecast", style = MaterialTheme.typography.titleMedium)
-                }
-
-                val hours = hourlyData?.time?.size ?: 0
-                itemsIndexed(
-                    (0 until minOf(hours, 24)).toList()
-                ) { _, index ->
-                    val time = hourlyData?.time?.getOrNull(index) ?: ""
-                    val temp = hourlyData?.temperature_2m?.getOrNull(index) ?: 0.0
-                    val humidity = hourlyData?.relative_humidity_2m?.getOrNull(index) ?: 0.0
-                    val rain = hourlyData?.precipitation?.getOrNull(index) ?: 0.0
-
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                time.substringAfter("T", time),
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.width(60.dp)
-                            )
-                            Icon(Icons.Rounded.Thermostat, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Text("${temp.toInt()}°", modifier = Modifier.width(40.dp))
-                            Icon(Icons.Rounded.Air, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Text("${humidity.toInt()}%", modifier = Modifier.width(40.dp))
-                            Icon(Icons.Rounded.WaterDrop, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Text("${String.format("%.1f", rain)}mm")
-                        }
+                is WeatherUiState.Success -> {
+                    PullToRefreshBox(
+                        isRefreshing = false,
+                        onRefresh = viewModel::refresh
+                    ) {
+                        WeatherContent(
+                            data = state.data,
+                            units = units,
+                            modifier = Modifier.verticalScroll(scrollState)
+                        )
                     }
                 }
             }
@@ -187,19 +115,143 @@ fun WeatherScreen(
 }
 
 @Composable
-private fun WeatherStat(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    value: String
+private fun WeatherErrorContent(
+    message: String,
+    onRetry: () -> Unit
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
-        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(label, style = MaterialTheme.typography.labelSmall)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.CloudOff,
+            contentDescription = null,
+            modifier = Modifier.size(48.dp),
+            tint = MaterialTheme.colorScheme.error
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = message,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = onRetry) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Retry")
+        }
     }
 }
 
-@dagger.hilt.android.lifecycle.HiltViewModel
-class WeatherRepoViewModel @javax.inject.Inject constructor(
-    val weatherRepository: WeatherRepository
-) : androidx.lifecycle.ViewModel()
+@Composable
+private fun WeatherContent(
+    data: com.project.rootsync.data.model.WeatherData,
+    units: com.project.rootsync.data.model.WeatherUnits,
+    modifier: Modifier = Modifier
+) {
+    val colors = MaterialTheme.colorScheme
+    val startIdx = WeatherDateHelper.nowHourIndex(data.hourlyTimes)
+
+    Column(
+        modifier = modifier.padding(16.dp)
+    ) {
+        // 1 — Hero card
+        HeroCard(
+            date = WeatherDateHelper.todayFormatted(),
+            temp = WeatherUnitConverter.formatTemp(data.temperature, units.tempUnit),
+            maxTemp = WeatherUnitConverter.formatTemp(data.todayMax, units.tempUnit),
+            minTemp = WeatherUnitConverter.formatTemp(data.todayMin, units.tempUnit),
+            feels = WeatherUnitConverter.formatTemp(data.feelsLike, units.tempUnit),
+            condition = WmoWeatherHelper.wmoLabel(data.weatherCode),
+            weatherCode = data.weatherCode,
+            isDay = data.isDay,
+            willRain = data.willRain,
+            colors = colors
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // 2 — Hourly strip
+        HourlyStrip(
+            times = data.hourlyTimes,
+            temps = data.hourlyTemps,
+            codes = data.hourlyCodes,
+            precipitations = data.hourlyPrecip,
+            startIndex = startIdx,
+            sunrise = data.sunrise,
+            sunset = data.sunset,
+            tempUnit = units.tempUnit,
+            colors = colors
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // 3 — Daily forecast
+        DailyForecastSection(
+            forecast = data.forecast7,
+            tempUnit = units.tempUnit,
+            colors = colors
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // 4 — Conditions grid
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            HumidityTile(
+                humidity = data.humidity,
+                tempC = data.temperature,
+                colors = colors,
+                modifier = Modifier.weight(1f)
+            )
+            WindTile(
+                speedKmh = data.windSpeed,
+                gustsKmh = data.windGusts,
+                directionDeg = data.windDirection,
+                windUnit = units.windUnit,
+                colors = colors,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            UvTile(
+                uvNow = data.uvCurrent.takeIf { it >= 0 } ?: data.todayUv,
+                uvDayMax = data.todayUv,
+                colors = colors,
+                modifier = Modifier.weight(1f)
+            )
+            PrecipTile(
+                amountMm = data.todayRain,
+                precipUnit = units.precipUnit,
+                colors = colors,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        AqiTile(
+            aqi = data.aqi,
+            colors = colors
+        )
+
+        Spacer(modifier = Modifier.height(36.dp))
+    }
+}

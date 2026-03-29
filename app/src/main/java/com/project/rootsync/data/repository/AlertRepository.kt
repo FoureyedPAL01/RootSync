@@ -7,48 +7,60 @@ import io.github.jan.supabase.postgrest.query.Order
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Repository for alert-related operations.
+ */
 @Singleton
 class AlertRepository @Inject constructor(
     private val supabase: SupabaseClient
 ) {
 
-    suspend fun getAlertsForDevice(deviceId: String, limit: Long = 50): List<Alert> =
-        supabase.postgrest["system_alerts"]
+    suspend fun fetchAlerts(deviceId: String): List<Alert> {
+        return supabase.postgrest["alerts"]
             .select {
                 filter {
                     eq("device_id", deviceId)
                 }
                 order("created_at", Order.DESCENDING)
-                limit(limit)
             }
             .decodeList<Alert>()
+    }
 
     suspend fun getUnreadAlerts(deviceId: String): List<Alert> =
-        supabase.postgrest["system_alerts"]
+        supabase.postgrest["alerts"]
             .select {
                 filter {
                     eq("device_id", deviceId)
-                    eq("is_read", false)
+                    eq("resolved", false)
                 }
                 order("created_at", Order.DESCENDING)
             }
             .decodeList<Alert>()
 
-    suspend fun markAlertAsRead(alertId: String) {
-        supabase.postgrest["system_alerts"]
-            .update(mapOf("is_read" to true)) {
+    suspend fun resolveAlert(id: Long) {
+        supabase.postgrest["alerts"]
+            .update(mapOf("resolved" to true)) {
                 filter {
-                    eq("id", alertId)
+                    eq("id", id)
                 }
             }
     }
 
-    suspend fun markAllAlertsAsRead(deviceId: String) {
-        supabase.postgrest["system_alerts"]
-            .update(mapOf("is_read" to true)) {
+    suspend fun markAllAsResolved(deviceId: String) {
+        supabase.postgrest["alerts"]
+            .update(mapOf("resolved" to true)) {
                 filter {
                     eq("device_id", deviceId)
-                    eq("is_read", false)
+                    eq("resolved", false)
+                }
+            }
+    }
+
+    suspend fun deleteAllAlerts(deviceId: String) {
+        supabase.postgrest["alerts"]
+            .delete {
+                filter {
+                    eq("device_id", deviceId)
                 }
             }
     }

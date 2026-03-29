@@ -7,6 +7,9 @@ import io.github.jan.supabase.postgrest.query.Order
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Repository for pump-related operations.
+ */
 @Singleton
 class PumpRepository @Inject constructor(
     private val supabase: SupabaseClient
@@ -18,8 +21,19 @@ class PumpRepository @Inject constructor(
                 filter {
                     eq("device_id", deviceId)
                 }
-                order("started_at", Order.DESCENDING)
+                order("pump_on_at", Order.DESCENDING)
                 limit(limit)
+            }
+            .decodeList<PumpLog>()
+
+    suspend fun getPumpLogsSince(deviceId: String, sinceDate: String): List<PumpLog> =
+        supabase.postgrest["pump_logs"]
+            .select {
+                filter {
+                    eq("device_id", deviceId)
+                    gte("pump_on_at", sinceDate)
+                }
+                order("pump_on_at", Order.ASCENDING)
             }
             .decodeList<PumpLog>()
 
@@ -32,16 +46,16 @@ class PumpRepository @Inject constructor(
             .select {
                 filter {
                     eq("device_id", deviceId)
-                    gte("started_at", from)
-                    lte("started_at", to)
+                    gte("pump_on_at", from)
+                    lte("pump_on_at", to)
                 }
-                order("started_at", Order.DESCENDING)
+                order("pump_on_at", Order.DESCENDING)
             }
             .decodeList<PumpLog>()
 
     suspend fun getTotalWaterUsed(deviceId: String, from: String, to: String): Double =
         getPumpLogsForRange(deviceId, from, to)
-            .sumOf { (it.waterUsedLiters ?: 0f).toDouble() }
+            .sumOf { it.waterUsedLitres ?: 0.0 }
 
     suspend fun insertPumpLog(pumpLog: PumpLog): PumpLog =
         supabase.postgrest["pump_logs"]

@@ -5,3 +5,4 @@ enum class SensorStatus { ONLINE, OFFLINE, WARNING }
 enum class IrrigationMode { AUTO, MANUAL, DISABLED }
 enum class TemperatureUnit { CELSIUS, FAHRENHEIT }
 enum class VolumeUnit { LITERS, GALLONS }
+enum class SaveStatus { IDLE, SAVING, SAVED, ERROR }

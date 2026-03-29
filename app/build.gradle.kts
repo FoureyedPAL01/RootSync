@@ -91,7 +91,7 @@ dependencies {
     implementation("com.patrykandpatrick.vico:compose-m3:1.13.1")
 
     // DataStore
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     // Retrofit (API calls - Open-Meteo)
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
